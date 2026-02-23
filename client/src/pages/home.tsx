@@ -6,7 +6,7 @@ import {
   calculateIndexLine, calculateBenchmarkLine, calculateWeights,
   formatMarketCap, formatPercent,
 } from "@/lib/indexCalculations";
-import { Loader2, Eye, EyeOff, RotateCcw } from "lucide-react";
+import { Loader2, Eye, EyeOff, RotateCcw, DollarSign } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const TIME_RANGES: TimeRange[] = ["1D", "7D", "1M", "6M", "1Y", "5Y", "10Y"];
@@ -35,6 +35,7 @@ export default function Home() {
   const [showSpy, setShowSpy] = useState(true);
   const [showVti, setShowVti] = useState(false);
   const [excludedSymbols, setExcludedSymbols] = useState<Set<string>>(new Set());
+  const [investmentAmount, setInvestmentAmount] = useState<string>("10000");
   const [tooltipData, setTooltipData] = useState<{
     date: string;
     opht?: number;
@@ -138,6 +139,9 @@ export default function Home() {
 
   const resetExclusions = useCallback(() => {
     setExcludedSymbols(new Set());
+    if (chartRef.current) {
+      chartRef.current.timeScale().fitContent();
+    }
   }, []);
 
   const chartHeight = isMobile ? 300 : 420;
@@ -529,6 +533,111 @@ export default function Home() {
             </span>
           </div>
         </div>
+
+        {/* Investment Calculator */}
+        {(() => {
+          const amt = parseFloat(investmentAmount) || 0;
+          const ophtFinal = ophtLine.length > 1 ? (amt * ophtLine[ophtLine.length - 1].value / 100) : null;
+          const spyFinal = spyLine.length > 1 ? (amt * spyLine[spyLine.length - 1].value / 100) : null;
+          const vtiFinal = vtiLine.length > 1 ? (amt * vtiLine[vtiLine.length - 1].value / 100) : null;
+          const formatDollar = (v: number) => v >= 1000 ? `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${v.toFixed(2)}`;
+
+          return (
+            <div
+              className="mt-4 rounded-md px-4 py-4"
+              style={{ backgroundColor: COLORS.surface, border: `1px solid ${COLORS.border}` }}
+              data-testid="investment-calculator"
+            >
+              <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
+                <div className="flex items-center gap-2 shrink-0">
+                  <DollarSign className="w-4 h-4" style={{ color: COLORS.opht }} />
+                  <span className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>
+                    If you invested
+                  </span>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm" style={{ color: COLORS.textMuted }}>$</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={investmentAmount}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.]/g, "");
+                        setInvestmentAmount(val);
+                      }}
+                      className="w-28 md:w-32 pl-6 pr-2 py-1.5 text-sm font-mono rounded-md outline-none focus:ring-1"
+                      style={{
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                        border: `1px solid ${COLORS.border}`,
+                        color: COLORS.textPrimary,
+                      }}
+                      data-testid="input-investment-amount"
+                    />
+                  </div>
+                  <span className="text-sm" style={{ color: COLORS.textSecondary }}>
+                    ({timeRange} ago)
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-3 md:gap-6">
+                  <div className="flex flex-col" data-testid="investment-result-opht">
+                    <span className="text-xs" style={{ color: COLORS.textMuted }}>$OPHT</span>
+                    <span
+                      className="text-sm md:text-base font-semibold font-mono"
+                      style={{ color: ophtFinal !== null && ophtFinal >= amt ? COLORS.opht : "#ef4444" }}
+                    >
+                      {amt > 0 && ophtFinal !== null ? formatDollar(ophtFinal) : "—"}
+                    </span>
+                    {amt > 0 && ophtFinal !== null && (
+                      <span className="text-xs font-mono" style={{ color: ophtFinal >= amt ? COLORS.opht : "#ef4444" }}>
+                        {ophtFinal >= amt ? "+" : ""}{formatDollar(ophtFinal - amt)}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="w-px h-10 hidden md:block" style={{ backgroundColor: COLORS.border }} />
+
+                  <div className="flex flex-col" data-testid="investment-result-spy">
+                    <span className="text-xs" style={{ color: COLORS.textMuted }}>SPY</span>
+                    <span
+                      className="text-sm md:text-base font-semibold font-mono"
+                      style={{
+                        color: showSpy ? (spyFinal !== null && spyFinal >= amt ? COLORS.spy : "#ef4444") : COLORS.textMuted,
+                        opacity: showSpy ? 1 : 0.4,
+                      }}
+                    >
+                      {showSpy && amt > 0 && spyFinal !== null ? formatDollar(spyFinal) : "—"}
+                    </span>
+                    {showSpy && amt > 0 && spyFinal !== null && (
+                      <span className="text-xs font-mono" style={{ color: spyFinal >= amt ? COLORS.spy : "#ef4444" }}>
+                        {spyFinal >= amt ? "+" : ""}{formatDollar(spyFinal - amt)}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="w-px h-10 hidden md:block" style={{ backgroundColor: COLORS.border }} />
+
+                  <div className="flex flex-col" data-testid="investment-result-vti">
+                    <span className="text-xs" style={{ color: COLORS.textMuted }}>VTI</span>
+                    <span
+                      className="text-sm md:text-base font-semibold font-mono"
+                      style={{
+                        color: showVti ? (vtiFinal !== null && vtiFinal >= amt ? COLORS.vti : "#ef4444") : COLORS.textMuted,
+                        opacity: showVti ? 1 : 0.4,
+                      }}
+                    >
+                      {showVti && amt > 0 && vtiFinal !== null ? formatDollar(vtiFinal) : "—"}
+                    </span>
+                    {showVti && amt > 0 && vtiFinal !== null && (
+                      <span className="text-xs font-mono" style={{ color: vtiFinal >= amt ? COLORS.vti : "#ef4444" }}>
+                        {vtiFinal >= amt ? "+" : ""}{formatDollar(vtiFinal - amt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Holdings Table */}
         <div className="mt-6" data-testid="holdings-section">
