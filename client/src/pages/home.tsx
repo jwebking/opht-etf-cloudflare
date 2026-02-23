@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createChart, type IChartApi, type ISeriesApi, ColorType, CrosshairMode, type LineData, type Time, LineSeries } from "lightweight-charts";
 import {
   type WeightingMode, type TimeRange, type Holding, type PricePoint,
   calculateIndexLine, calculateBenchmarkLine, calculateWeights,
   formatMarketCap, formatPercent,
 } from "@/lib/indexCalculations";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, RotateCcw } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const TIME_RANGES: TimeRange[] = ["1D", "7D", "1M", "6M", "1Y", "5Y", "10Y"];
@@ -34,6 +34,7 @@ export default function Home() {
   const [timeRange, setTimeRange] = useState<TimeRange>("1Y");
   const [showSpy, setShowSpy] = useState(true);
   const [showVti, setShowVti] = useState(false);
+  const [excludedSymbols, setExcludedSymbols] = useState<Set<string>>(new Set());
   const [tooltipData, setTooltipData] = useState<{
     date: string;
     opht?: number;
@@ -70,24 +71,31 @@ export default function Home() {
     enabled: statusQuery.data?.seeded === true,
   });
 
-  // Trigger seed if not yet done
   useEffect(() => {
     if (statusQuery.data && !statusQuery.data.seeded && !statusQuery.data.seedInProgress) {
       fetch("/api/seed");
     }
   }, [statusQuery.data]);
 
-  const ophtLine = chartDataQuery.data && holdingsQuery.data
-    ? calculateIndexLine(chartDataQuery.data, holdingsQuery.data, weightingMode, timeRange)
-    : [];
+  const activeHoldings = useMemo(() => {
+    if (!holdingsQuery.data) return [];
+    return holdingsQuery.data.filter(h => !excludedSymbols.has(h.symbol));
+  }, [holdingsQuery.data, excludedSymbols]);
 
-  const spyLine = chartDataQuery.data
-    ? calculateBenchmarkLine(chartDataQuery.data, "SPY", timeRange)
-    : [];
+  const ophtLine = useMemo(() => {
+    if (!chartDataQuery.data || activeHoldings.length === 0) return [];
+    return calculateIndexLine(chartDataQuery.data, activeHoldings, weightingMode, timeRange);
+  }, [chartDataQuery.data, activeHoldings, weightingMode, timeRange]);
 
-  const vtiLine = chartDataQuery.data
-    ? calculateBenchmarkLine(chartDataQuery.data, "VTI", timeRange)
-    : [];
+  const spyLine = useMemo(() => {
+    if (!chartDataQuery.data) return [];
+    return calculateBenchmarkLine(chartDataQuery.data, "SPY", timeRange);
+  }, [chartDataQuery.data, timeRange]);
+
+  const vtiLine = useMemo(() => {
+    if (!chartDataQuery.data) return [];
+    return calculateBenchmarkLine(chartDataQuery.data, "VTI", timeRange);
+  }, [chartDataQuery.data, timeRange]);
 
   const ophtReturn = ophtLine.length > 1
     ? ((ophtLine[ophtLine.length - 1].value - 100) / 100) * 100
@@ -99,23 +107,49 @@ export default function Home() {
     ? ((vtiLine[vtiLine.length - 1].value - 100) / 100) * 100
     : null;
 
-  const weights = holdingsQuery.data
-    ? calculateWeights(holdingsQuery.data, weightingMode)
-    : [];
+  const weights = useMemo(() => {
+    if (!holdingsQuery.data) return [];
+    return calculateWeights(activeHoldings, weightingMode);
+  }, [holdingsQuery.data, activeHoldings, weightingMode]);
 
-  const handleResize = useCallback(() => {
-    if (chartRef.current && chartContainerRef.current) {
-      chartRef.current.applyOptions({
-        width: chartContainerRef.current.clientWidth,
-        height: window.innerWidth < 768 ? 300 : 420,
-      });
-    }
+  const allWeights = useMemo(() => {
+    if (!holdingsQuery.data) return [];
+    return holdingsQuery.data.map(h => {
+      const w = weights.find(w => w.symbol === h.symbol);
+      return {
+        ...h,
+        weight: w?.weight ?? 0,
+        excluded: excludedSymbols.has(h.symbol),
+      };
+    });
+  }, [holdingsQuery.data, weights, excludedSymbols]);
+
+  const toggleSymbol = useCallback((symbol: string) => {
+    setExcludedSymbols(prev => {
+      const next = new Set(prev);
+      if (next.has(symbol)) {
+        next.delete(symbol);
+      } else {
+        next.add(symbol);
+      }
+      return next;
+    });
   }, []);
 
-  useEffect(() => {
-    if (!chartContainerRef.current) return;
+  const resetExclusions = useCallback(() => {
+    setExcludedSymbols(new Set());
+  }, []);
 
-    const chart = createChart(chartContainerRef.current, {
+  const chartHeight = isMobile ? 300 : 420;
+  const chartCreatedRef = useRef(false);
+  const dataReady = !!(statusQuery.data?.seeded && !chartDataQuery.isLoading && !holdingsQuery.isLoading && chartDataQuery.data && holdingsQuery.data);
+
+  useEffect(() => {
+    if (!dataReady || !chartContainerRef.current || chartCreatedRef.current) return;
+
+    const container = chartContainerRef.current;
+
+    const chart = createChart(container, {
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: COLORS.textSecondary,
@@ -138,8 +172,8 @@ export default function Home() {
         borderColor: "rgba(255,255,255,0.1)",
         timeVisible: false,
       },
-      width: chartContainerRef.current.clientWidth,
-      height: window.innerWidth < 768 ? 300 : 420,
+      width: container.clientWidth,
+      height: chartHeight,
       handleScroll: { mouseWheel: false, pressedMouseMove: true },
       handleScale: { mouseWheel: false, pinch: true },
     });
@@ -177,6 +211,7 @@ export default function Home() {
     ophtSeriesRef.current = ophtSeries;
     spySeriesRef.current = spySeries;
     vtiSeriesRef.current = vtiSeries;
+    chartCreatedRef.current = true;
 
     chart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.point) {
@@ -200,14 +235,27 @@ export default function Home() {
       });
     });
 
-    window.addEventListener("resize", handleResize);
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (chartRef.current) {
+          const width = entry.contentRect.width;
+          const newHeight = window.innerWidth < 768 ? 300 : 420;
+          chartRef.current.applyOptions({ width, height: newHeight });
+        }
+      }
+    });
+    resizeObserver.observe(container);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
+      resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
+      ophtSeriesRef.current = null;
+      spySeriesRef.current = null;
+      vtiSeriesRef.current = null;
+      chartCreatedRef.current = false;
     };
-  }, [handleResize]);
+  }, [dataReady]);
 
   useEffect(() => {
     if (!ophtSeriesRef.current) return;
@@ -236,10 +284,6 @@ export default function Home() {
       vtiSeriesRef.current.applyOptions({ visible: false });
     }
   }, [showVti, vtiLine]);
-
-  useEffect(() => {
-    handleResize();
-  }, [handleResize]);
 
   if (!statusQuery.data?.seeded) {
     return (
@@ -340,6 +384,28 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Exclusion notice */}
+        {excludedSymbols.size > 0 && (
+          <div
+            className="mb-3 rounded-md px-3 py-2 flex items-center justify-between text-xs"
+            style={{ backgroundColor: "rgba(211, 240, 96, 0.08)", border: "1px solid rgba(211, 240, 96, 0.2)" }}
+            data-testid="exclusion-notice"
+          >
+            <span style={{ color: COLORS.opht }}>
+              {excludedSymbols.size} stock{excludedSymbols.size > 1 ? "s" : ""} excluded from index calculation
+            </span>
+            <button
+              onClick={resetExclusions}
+              className="flex items-center gap-1 px-2 py-1 rounded transition-colors"
+              style={{ color: COLORS.opht }}
+              data-testid="button-reset-exclusions"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset
+            </button>
+          </div>
+        )}
+
         {/* Chart */}
         <div
           className="rounded-md relative"
@@ -384,7 +450,7 @@ export default function Home() {
             </div>
           )}
 
-          <div ref={chartContainerRef} className="w-full" style={{ minHeight: isMobile ? 300 : 420 }} />
+          <div ref={chartContainerRef} className="w-full" style={{ minHeight: chartHeight }} />
 
           {/* Time range selector */}
           <div className="flex justify-center gap-1 pb-3 pt-2" data-testid="time-range-selector">
@@ -466,12 +532,17 @@ export default function Home() {
 
         {/* Holdings Table */}
         <div className="mt-6" data-testid="holdings-section">
-          <h2 className="text-lg font-semibold mb-3" data-testid="text-holdings-title">
-            Holdings
-            <span className="text-xs font-normal ml-2" style={{ color: COLORS.textMuted }}>
-              ({WEIGHTING_MODES.find(m => m.key === weightingMode)?.label} weighted)
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold" data-testid="text-holdings-title">
+              Holdings
+              <span className="text-xs font-normal ml-2" style={{ color: COLORS.textMuted }}>
+                ({WEIGHTING_MODES.find(m => m.key === weightingMode)?.label} weighted)
+              </span>
+            </h2>
+            <span className="text-xs" style={{ color: COLORS.textMuted }}>
+              Click eye icon to toggle stocks
             </span>
-          </h2>
+          </div>
           <div
             className="rounded-md"
             style={{ backgroundColor: COLORS.surface, border: `1px solid ${COLORS.border}` }}
@@ -480,28 +551,45 @@ export default function Home() {
               <table className="w-full text-sm" data-testid="table-holdings">
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                    <th className="text-left px-3 md:px-4 py-2.5 font-medium" style={{ color: COLORS.textMuted }}>Ticker</th>
-                    <th className="text-left px-3 md:px-4 py-2.5 font-medium hidden md:table-cell" style={{ color: COLORS.textMuted }}>Company</th>
-                    <th className="text-right px-3 md:px-4 py-2.5 font-medium" style={{ color: COLORS.textMuted }}>Weight</th>
-                    <th className="text-right px-3 md:px-4 py-2.5 font-medium" style={{ color: COLORS.textMuted }}>Mkt Cap</th>
+                    <th className="w-10 px-2 md:px-3 py-2.5" />
+                    <th className="text-left px-2 md:px-4 py-2.5 font-medium" style={{ color: COLORS.textMuted }}>Ticker</th>
+                    <th className="text-left px-2 md:px-4 py-2.5 font-medium hidden md:table-cell" style={{ color: COLORS.textMuted }}>Company</th>
+                    <th className="text-right px-2 md:px-4 py-2.5 font-medium" style={{ color: COLORS.textMuted }}>Weight</th>
+                    <th className="text-right px-2 md:px-4 py-2.5 font-medium" style={{ color: COLORS.textMuted }}>Mkt Cap</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {weights.map((h, i) => (
+                  {allWeights.map((h, i) => (
                     <tr
                       key={h.symbol}
-                      style={{ borderBottom: i < weights.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}
+                      className="transition-opacity"
+                      style={{
+                        borderBottom: i < allWeights.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none",
+                        opacity: h.excluded ? 0.4 : 1,
+                      }}
                       data-testid={`row-holding-${h.symbol}`}
                     >
-                      <td className="px-3 md:px-4 py-2 md:py-2.5">
-                        <span className="font-medium" style={{ color: COLORS.opht }}>{h.symbol}</span>
+                      <td className="px-2 md:px-3 py-2 md:py-2.5 text-center">
+                        <button
+                          onClick={() => toggleSymbol(h.symbol)}
+                          className="p-1 rounded transition-colors"
+                          style={{ color: h.excluded ? COLORS.textMuted : COLORS.opht }}
+                          data-testid={`button-toggle-${h.symbol}`}
+                        >
+                          {h.excluded ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </td>
+                      <td className="px-2 md:px-4 py-2 md:py-2.5">
+                        <span className="font-medium" style={{ color: h.excluded ? COLORS.textMuted : COLORS.opht }}>{h.symbol}</span>
                         <span className="block text-xs md:hidden truncate max-w-[140px]" style={{ color: COLORS.textMuted }}>{h.companyName}</span>
                       </td>
-                      <td className="px-3 md:px-4 py-2 md:py-2.5 hidden md:table-cell" style={{ color: COLORS.textSecondary }}>{h.companyName}</td>
-                      <td className="px-3 md:px-4 py-2 md:py-2.5 text-right font-mono" style={{ color: COLORS.textPrimary }}>
-                        {(h.weight * 100).toFixed(1)}%
+                      <td className="px-2 md:px-4 py-2 md:py-2.5 hidden md:table-cell" style={{ color: h.excluded ? COLORS.textMuted : COLORS.textSecondary }}>
+                        {h.companyName}
                       </td>
-                      <td className="px-3 md:px-4 py-2 md:py-2.5 text-right font-mono" style={{ color: COLORS.textSecondary }}>
+                      <td className="px-2 md:px-4 py-2 md:py-2.5 text-right font-mono" style={{ color: h.excluded ? COLORS.textMuted : COLORS.textPrimary }}>
+                        {h.excluded ? "—" : `${(h.weight * 100).toFixed(1)}%`}
+                      </td>
+                      <td className="px-2 md:px-4 py-2 md:py-2.5 text-right font-mono" style={{ color: COLORS.textSecondary }}>
                         {formatMarketCap(h.marketCap)}
                       </td>
                     </tr>
