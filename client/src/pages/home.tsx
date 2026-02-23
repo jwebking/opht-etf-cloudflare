@@ -696,7 +696,7 @@ export default function Home() {
                         {h.companyName}
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-2.5 text-right font-mono" style={{ color: h.excluded ? COLORS.textMuted : COLORS.textPrimary }}>
-                        {h.excluded ? "—" : `${(h.weight * 100).toFixed(1)}%`}
+                        {h.excluded ? "—" : `${(h.weight * 100).toFixed(2)}%`}
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-2.5 text-right font-mono" style={{ color: COLORS.textSecondary }}>
                         {formatMarketCap(h.marketCap)}
