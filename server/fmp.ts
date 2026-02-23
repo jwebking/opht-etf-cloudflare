@@ -26,7 +26,7 @@ const OPHT_TICKERS: Record<string, string> = {
   OKYO: "OKYO Pharma",
   RXST: "RxSight Inc.",
   SGHT: "Sight Sciences",
-  SGP: "Superior Group of Companies",
+  SGP: "SpyGlass Pharma",
   STAA: "STAAR Surgical Company",
   TARS: "Tarsus Pharmaceuticals",
   VRDN: "Viridian Therapeutics",

@@ -719,7 +719,7 @@ export default function Home() {
             This is a custom-constructed index for educational and informational purposes only. Not investment advice.
             Past performance does not guarantee future results.
           </p>
-          <p>Built by jwebking</p>
+          <p>Built by <a href="https://www.linkedin.com/in/jamiesonwebking/" target="_blank" rel="noopener noreferrer" className="hover:text-[#D3F060] transition-colors underline" data-testid="link-linkedin">jwebking</a></p>
         </footer>
       </div>
     </div>
