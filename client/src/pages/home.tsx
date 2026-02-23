@@ -6,8 +6,9 @@ import {
   calculateIndexLine, calculateBenchmarkLine, calculateWeights,
   formatMarketCap, formatPercent,
 } from "@/lib/indexCalculations";
-import { Loader2, Eye, EyeOff, RotateCcw, DollarSign } from "lucide-react";
+import { Loader2, Eye, EyeOff, RotateCcw, DollarSign, Sun, Moon } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTheme } from "@/components/ThemeProvider";
 
 const TIME_RANGES: TimeRange[] = ["1D", "7D", "1M", "6M", "1Y", "5Y", "10Y"];
 const WEIGHTING_MODES: { key: WeightingMode; label: string }[] = [
@@ -16,20 +17,62 @@ const WEIGHTING_MODES: { key: WeightingMode; label: string }[] = [
   { key: "capped_25", label: "Capped (25%)" },
 ];
 
-const COLORS = {
-  opht: "#D3F060",
-  spy: "#4DB8A4",
-  vti: "#5B8DEF",
-  background: "#0D1117",
-  surface: "#0f2027",
-  border: "#1a3040",
-  textPrimary: "#F0F6FC",
-  textSecondary: "#8B949E",
-  textMuted: "#484F58",
-};
+function getColors(theme: "light" | "dark") {
+  if (theme === "dark") {
+    return {
+      opht: "#D3F060",
+      spy: "#00A8E8",
+      vti: "#007EA7",
+      background: "#00171F",
+      surface: "#003459",
+      border: "#007EA7",
+      textPrimary: "#FFFFFF",
+      textSecondary: "#7BA8C4",
+      textMuted: "#3A6B8A",
+      gridLine: "rgba(255,255,255,0.04)",
+      crosshair: "rgba(255,255,255,0.2)",
+      priceBorder: "rgba(255,255,255,0.1)",
+      tooltipBg: "rgba(0, 23, 31, 0.92)",
+      inputBg: "rgba(255,255,255,0.05)",
+      rowBorder: "rgba(255,255,255,0.04)",
+      spyBgActive: "rgba(0, 168, 232, 0.15)",
+      spyBorderActive: "rgba(0, 168, 232, 0.3)",
+      vtiBgActive: "rgba(0, 126, 167, 0.15)",
+      vtiBorderActive: "rgba(0, 126, 167, 0.3)",
+      ophtBgActive: "rgba(211, 240, 96, 0.15)",
+      ophtBorderActive: "rgba(211, 240, 96, 0.3)",
+    };
+  }
+  return {
+    opht: "#7B9A1E",
+    spy: "#0088C2",
+    vti: "#006080",
+    background: "#FFFFFF",
+    surface: "#F0F4F8",
+    border: "rgba(0, 126, 167, 0.2)",
+    textPrimary: "#00171F",
+    textSecondary: "#003459",
+    textMuted: "#7BA8C4",
+    gridLine: "rgba(0, 52, 89, 0.06)",
+    crosshair: "rgba(0, 52, 89, 0.2)",
+    priceBorder: "rgba(0, 52, 89, 0.1)",
+    tooltipBg: "rgba(255, 255, 255, 0.95)",
+    inputBg: "rgba(0, 52, 89, 0.05)",
+    rowBorder: "rgba(0, 52, 89, 0.06)",
+    spyBgActive: "rgba(0, 168, 232, 0.1)",
+    spyBorderActive: "rgba(0, 168, 232, 0.3)",
+    vtiBgActive: "rgba(0, 126, 167, 0.1)",
+    vtiBorderActive: "rgba(0, 126, 167, 0.3)",
+    ophtBgActive: "rgba(123, 154, 30, 0.1)",
+    ophtBorderActive: "rgba(123, 154, 30, 0.3)",
+  };
+}
 
 export default function Home() {
   const isMobile = useIsMobile();
+  const { theme, toggleTheme } = useTheme();
+  const COLORS = getColors(theme);
+
   const [weightingMode, setWeightingMode] = useState<WeightingMode>("market_cap");
   const [timeRange, setTimeRange] = useState<TimeRange>("1Y");
   const [showSpy, setShowSpy] = useState(true);
@@ -145,35 +188,43 @@ export default function Home() {
   }, []);
 
   const chartHeight = isMobile ? 300 : 420;
-  const chartCreatedRef = useRef(false);
   const dataReady = !!(statusQuery.data?.seeded && !chartDataQuery.isLoading && !holdingsQuery.isLoading && chartDataQuery.data && holdingsQuery.data);
 
   useEffect(() => {
-    if (!dataReady || !chartContainerRef.current || chartCreatedRef.current) return;
+    if (!dataReady || !chartContainerRef.current) return;
 
     const container = chartContainerRef.current;
+    const colors = getColors(theme);
+
+    if (chartRef.current) {
+      chartRef.current.remove();
+      chartRef.current = null;
+      ophtSeriesRef.current = null;
+      spySeriesRef.current = null;
+      vtiSeriesRef.current = null;
+    }
 
     const chart = createChart(container, {
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: COLORS.textSecondary,
+        textColor: colors.textSecondary,
         fontFamily: "'DM Sans', 'Inter', sans-serif",
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.04)" },
-        horzLines: { color: "rgba(255,255,255,0.04)" },
+        vertLines: { color: colors.gridLine },
+        horzLines: { color: colors.gridLine },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: "rgba(255,255,255,0.2)", width: 1, style: 2 },
-        horzLine: { color: "rgba(255,255,255,0.2)", width: 1, style: 2 },
+        vertLine: { color: colors.crosshair, width: 1, style: 2 },
+        horzLine: { color: colors.crosshair, width: 1, style: 2 },
       },
       rightPriceScale: {
-        borderColor: "rgba(255,255,255,0.1)",
+        borderColor: colors.priceBorder,
         scaleMargins: { top: 0.1, bottom: 0.1 },
       },
       timeScale: {
-        borderColor: "rgba(255,255,255,0.1)",
+        borderColor: colors.priceBorder,
         timeVisible: false,
       },
       width: container.clientWidth,
@@ -183,7 +234,7 @@ export default function Home() {
     });
 
     const ophtSeries = chart.addSeries(LineSeries, {
-      color: COLORS.opht,
+      color: colors.opht,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -192,7 +243,7 @@ export default function Home() {
     });
 
     const spySeries = chart.addSeries(LineSeries, {
-      color: COLORS.spy,
+      color: colors.spy,
       lineWidth: 1,
       lineStyle: 0,
       priceLineVisible: false,
@@ -202,7 +253,7 @@ export default function Home() {
     });
 
     const vtiSeries = chart.addSeries(LineSeries, {
-      color: COLORS.vti,
+      color: colors.vti,
       lineWidth: 1,
       lineStyle: 0,
       priceLineVisible: false,
@@ -215,7 +266,6 @@ export default function Home() {
     ophtSeriesRef.current = ophtSeries;
     spySeriesRef.current = spySeries;
     vtiSeriesRef.current = vtiSeries;
-    chartCreatedRef.current = true;
 
     chart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.point) {
@@ -257,9 +307,8 @@ export default function Home() {
       ophtSeriesRef.current = null;
       spySeriesRef.current = null;
       vtiSeriesRef.current = null;
-      chartCreatedRef.current = false;
     };
-  }, [dataReady]);
+  }, [dataReady, theme]);
 
   useEffect(() => {
     if (!ophtSeriesRef.current) return;
@@ -291,7 +340,7 @@ export default function Home() {
 
   if (!statusQuery.data?.seeded) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: COLORS.background }}>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 transition-colors duration-300" style={{ backgroundColor: COLORS.background }}>
         <Loader2 className="w-8 h-8 animate-spin" style={{ color: COLORS.opht }} />
         <p className="text-lg" style={{ color: COLORS.textSecondary }}>
           Loading market data for the first time...
@@ -305,41 +354,52 @@ export default function Home() {
 
   if (chartDataQuery.isLoading || holdingsQuery.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: COLORS.background }}>
+      <div className="min-h-screen flex items-center justify-center transition-colors duration-300" style={{ backgroundColor: COLORS.background }}>
         <Loader2 className="w-8 h-8 animate-spin" style={{ color: COLORS.opht }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: COLORS.background, color: COLORS.textPrimary }}>
+    <div className="min-h-screen transition-colors duration-300" style={{ backgroundColor: COLORS.background, color: COLORS.textPrimary }}>
       <div className="max-w-6xl mx-auto px-4 py-6 md:py-10">
 
-        {/* Header */}
         <header className="mb-6 md:mb-8" data-testid="header-section">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-title">
-                Ophthalmology Sector ETF
-              </h1>
-              <span
-                className="text-lg md:text-xl font-semibold"
-                style={{ color: COLORS.opht }}
-                data-testid="text-ticker"
-              >
-                $OPHT
-              </span>
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-title">
+                  Ophthalmology Sector ETF
+                </h1>
+                <span
+                  className="text-lg md:text-xl font-semibold"
+                  style={{ color: COLORS.opht }}
+                  data-testid="text-ticker"
+                >
+                  $OPHT
+                </span>
+              </div>
+              <p className="text-sm md:text-base" style={{ color: COLORS.textSecondary }} data-testid="text-tagline">
+                A custom-constructed index tracking publicly traded ophthalmology companies.
+              </p>
             </div>
-            <p className="text-sm md:text-base" style={{ color: COLORS.textSecondary }} data-testid="text-tagline">
-              A custom-constructed index tracking publicly traded ophthalmology companies.
-            </p>
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-md transition-colors shrink-0 mt-1"
+              style={{
+                color: COLORS.textSecondary,
+                backgroundColor: COLORS.surface,
+                border: `1px solid ${COLORS.border}`,
+              }}
+              data-testid="button-theme-toggle"
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
           </div>
         </header>
 
-        {/* Controls */}
         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between" data-testid="controls-section">
-
-          {/* Weighting toggle */}
           <div className="flex rounded-md p-1 gap-1" style={{ backgroundColor: COLORS.surface }} data-testid="weighting-toggle">
             {WEIGHTING_MODES.map(({ key, label }) => (
               <button
@@ -347,9 +407,9 @@ export default function Home() {
                 onClick={() => setWeightingMode(key)}
                 className="px-3 py-2 md:py-1.5 text-xs md:text-sm font-medium rounded-md transition-colors flex-1 md:flex-none"
                 style={{
-                  backgroundColor: weightingMode === key ? "rgba(211, 240, 96, 0.15)" : "transparent",
+                  backgroundColor: weightingMode === key ? COLORS.ophtBgActive : "transparent",
                   color: weightingMode === key ? COLORS.opht : COLORS.textSecondary,
-                  border: weightingMode === key ? `1px solid rgba(211, 240, 96, 0.3)` : "1px solid transparent",
+                  border: weightingMode === key ? `1px solid ${COLORS.ophtBorderActive}` : "1px solid transparent",
                 }}
                 data-testid={`button-weighting-${key}`}
               >
@@ -358,16 +418,15 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Benchmark chips */}
           <div className="flex gap-2" data-testid="benchmark-toggles">
             <span className="text-xs self-center mr-1" style={{ color: COLORS.textMuted }}>Benchmarks:</span>
             <button
               onClick={() => setShowSpy(!showSpy)}
               className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
               style={{
-                backgroundColor: showSpy ? "rgba(77, 184, 164, 0.15)" : "transparent",
+                backgroundColor: showSpy ? COLORS.spyBgActive : "transparent",
                 color: showSpy ? COLORS.spy : COLORS.textMuted,
-                border: showSpy ? `1px solid rgba(77, 184, 164, 0.3)` : `1px solid ${COLORS.border}`,
+                border: showSpy ? `1px solid ${COLORS.spyBorderActive}` : `1px solid ${COLORS.border}`,
               }}
               data-testid="button-toggle-spy"
             >
@@ -377,9 +436,9 @@ export default function Home() {
               onClick={() => setShowVti(!showVti)}
               className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
               style={{
-                backgroundColor: showVti ? "rgba(91, 141, 239, 0.15)" : "transparent",
+                backgroundColor: showVti ? COLORS.vtiBgActive : "transparent",
                 color: showVti ? COLORS.vti : COLORS.textMuted,
-                border: showVti ? `1px solid rgba(91, 141, 239, 0.3)` : `1px solid ${COLORS.border}`,
+                border: showVti ? `1px solid ${COLORS.vtiBorderActive}` : `1px solid ${COLORS.border}`,
               }}
               data-testid="button-toggle-vti"
             >
@@ -388,11 +447,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Exclusion notice */}
         {excludedSymbols.size > 0 && (
           <div
             className="mb-3 rounded-md px-3 py-2 flex items-center justify-between text-xs"
-            style={{ backgroundColor: "rgba(211, 240, 96, 0.08)", border: "1px solid rgba(211, 240, 96, 0.2)" }}
+            style={{ backgroundColor: COLORS.ophtBgActive, border: `1px solid ${COLORS.ophtBorderActive}` }}
             data-testid="exclusion-notice"
           >
             <span style={{ color: COLORS.opht }}>
@@ -410,17 +468,15 @@ export default function Home() {
           </div>
         )}
 
-        {/* Chart */}
         <div
           className="rounded-md relative"
           style={{ backgroundColor: COLORS.surface, border: `1px solid ${COLORS.border}` }}
           data-testid="chart-container"
         >
-          {/* Tooltip */}
           {tooltipData && (
             <div
               className="absolute top-3 left-3 z-10 rounded-md px-3 py-2 text-xs"
-              style={{ backgroundColor: "rgba(13, 17, 23, 0.9)", border: `1px solid ${COLORS.border}` }}
+              style={{ backgroundColor: COLORS.tooltipBg, border: `1px solid ${COLORS.border}` }}
               data-testid="chart-tooltip"
             >
               <div className="font-medium mb-1" style={{ color: COLORS.textPrimary }}>{tooltipData.date}</div>
@@ -456,7 +512,6 @@ export default function Home() {
 
           <div ref={chartContainerRef} className="w-full" style={{ minHeight: chartHeight }} />
 
-          {/* Time range selector */}
           <div className="flex justify-center gap-1 pb-3 pt-2" data-testid="time-range-selector">
             {TIME_RANGES.map(r => (
               <button
@@ -464,7 +519,7 @@ export default function Home() {
                 onClick={() => setTimeRange(r)}
                 className={`${isMobile ? "px-3 py-2" : "px-2.5 py-1"} text-xs font-medium rounded-md transition-colors`}
                 style={{
-                  backgroundColor: timeRange === r ? "rgba(211, 240, 96, 0.15)" : "transparent",
+                  backgroundColor: timeRange === r ? COLORS.ophtBgActive : "transparent",
                   color: timeRange === r ? COLORS.opht : COLORS.textMuted,
                 }}
                 data-testid={`button-range-${r}`}
@@ -475,7 +530,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Summary Stats Bar */}
         <div
           className="mt-4 rounded-md px-4 py-3 grid grid-cols-3 gap-2 md:flex md:flex-wrap md:gap-8 md:items-center text-sm"
           style={{ backgroundColor: COLORS.surface, border: `1px solid ${COLORS.border}` }}
@@ -534,7 +588,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Investment Calculator */}
         {(() => {
           const amt = parseFloat(investmentAmount) || 0;
           const ophtFinal = ophtLine.length > 1 ? (amt * ophtLine[ophtLine.length - 1].value / 100) : null;
@@ -566,7 +619,7 @@ export default function Home() {
                       }}
                       className="w-28 md:w-32 pl-6 pr-2 py-1.5 text-sm font-mono rounded-md outline-none focus:ring-1"
                       style={{
-                        backgroundColor: "rgba(255,255,255,0.05)",
+                        backgroundColor: COLORS.inputBg,
                         border: `1px solid ${COLORS.border}`,
                         color: COLORS.textPrimary,
                       }}
@@ -639,7 +692,6 @@ export default function Home() {
           );
         })()}
 
-        {/* Holdings Table */}
         <div className="mt-6" data-testid="holdings-section">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold" data-testid="text-holdings-title">
@@ -673,7 +725,7 @@ export default function Home() {
                       key={h.symbol}
                       className="transition-opacity"
                       style={{
-                        borderBottom: i < allWeights.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none",
+                        borderBottom: i < allWeights.length - 1 ? `1px solid ${COLORS.rowBorder}` : "none",
                         opacity: h.excluded ? 0.4 : 1,
                       }}
                       data-testid={`row-holding-${h.symbol}`}
@@ -709,7 +761,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Footer */}
         <footer className="mt-8 mb-6 text-center text-xs" style={{ color: COLORS.textMuted }} data-testid="footer-section">
           <p className="mb-1">
             Methodology: {weightingMode === "market_cap" ? "Float-adjusted market cap weighted" : weightingMode === "equal_weight" ? "Equal weighted" : "Market cap weighted, capped at 25% per holding"}.
@@ -719,7 +770,7 @@ export default function Home() {
             This is a custom-constructed index for educational and informational purposes only. Not investment advice.
             Past performance does not guarantee future results.
           </p>
-          <p>Built by <a href="https://www.linkedin.com/in/jamiesonwebking/" target="_blank" rel="noopener noreferrer" className="hover:text-[#D3F060] transition-colors underline" data-testid="link-linkedin">jwebking</a></p>
+          <p>Built by <a href="https://www.linkedin.com/in/jamiesonwebking/" target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-colors underline" data-testid="link-linkedin">jwebking</a></p>
         </footer>
       </div>
     </div>

@@ -4,6 +4,8 @@
 A professional-grade custom ETF index tracker for the ophthalmology sector, featuring 26 ophthalmology company tickers with interactive TradingView charts, benchmark comparisons against SPY and VTI, and three weighting methodologies.
 
 ## Recent Changes
+- 2026-02-23: Added light/dark mode toggle with new ocean blue color palette
+- 2026-02-23: Fixed SGP company name to SpyGlass Pharma, added LinkedIn footer link
 - 2026-02-23: Initial build complete - data seeding, chart rendering, holdings table, mobile optimization
 
 ## Project Architecture
@@ -23,12 +25,14 @@ A professional-grade custom ETF index tracker for the ophthalmology sector, feat
 - `client/src/lib/indexCalculations.ts` - Index calculation logic (3 weighting modes)
 - `client/src/index.css` - Theme variables (dark navy/teal with lime accent)
 
-### Design System
-- Background: #0D1117 (dark navy)
-- Surface: #0f2027 (dark teal)
-- Primary accent: #D3F060 (lime)
-- SPY color: #4DB8A4 (teal)
-- VTI color: #5B8DEF (blue)
+### Design System (Light/Dark mode)
+- **Dark mode**: Ink Black (#00171F) bg, Deep Space Blue (#003459) surfaces, Cerulean (#007EA7) borders
+- **Light mode**: White (#FFFFFF) bg, Light Gray (#F0F4F8) surfaces, Cerulean borders
+- **OPHT accent**: Lime #D3F060 (dark) / #7B9A1E (light)
+- **SPY color**: Fresh Sky #00A8E8 (dark) / #0088C2 (light)
+- **VTI color**: Cerulean #007EA7 (dark) / #006080 (light)
+- **Theme toggle**: Sun/Moon icon in header, persists via localStorage
+- **Components**: ThemeProvider context at `client/src/components/ThemeProvider.tsx`
 - Fonts: DM Sans / Inter
 
 ### Tickers (26 ophthalmology companies)
@@ -47,6 +51,7 @@ Plus benchmarks: SPY, VTI
 4. Frontend receives all price data via /api/chart-data, calculates index lines client-side
 
 ## User Preferences
-- Dark theme preferred
+- Dark theme default, light mode available via toggle
 - Mobile-first design important
 - Professional financial data visualization style
+- Ocean blue palette: Ink Black, Deep Space Blue, Cerulean, Fresh Sky
