@@ -6,8 +6,9 @@ import {
   calculateIndexLine, calculateBenchmarkLine, calculateWeights,
   formatMarketCap, formatPercent,
 } from "@/lib/indexCalculations";
-import { Loader2, Eye, EyeOff, RotateCcw, DollarSign } from "lucide-react";
+import { Loader2, Eye, EyeOff, RotateCcw, DollarSign, Sun, Moon } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTheme } from "@/components/theme-provider";
 
 const TIME_RANGES: TimeRange[] = ["1D", "7D", "1M", "6M", "1Y", "5Y", "10Y"];
 const WEIGHTING_MODES: { key: WeightingMode; label: string }[] = [
@@ -16,7 +17,7 @@ const WEIGHTING_MODES: { key: WeightingMode; label: string }[] = [
   { key: "capped_25", label: "Capped (25%)" },
 ];
 
-const COLORS = {
+const DARK_COLORS = {
   opht: "#D3F060",
   spy: "#4DB8A4",
   vti: "#5B8DEF",
@@ -26,10 +27,41 @@ const COLORS = {
   textPrimary: "#F0F6FC",
   textSecondary: "#8B949E",
   textMuted: "#484F58",
+  gridLine: "rgba(255,255,255,0.04)",
+  crosshair: "rgba(255,255,255,0.2)",
+  scaleBorder: "rgba(255,255,255,0.1)",
+  tooltipBg: "rgba(13, 17, 23, 0.9)",
+  inputBg: "rgba(255,255,255,0.05)",
+  rowBorder: "rgba(255,255,255,0.04)",
 };
+
+const LIGHT_COLORS = {
+  opht: "#7A9A10",
+  spy: "#1A8A70",
+  vti: "#3B6DD0",
+  background: "#F8FAFB",
+  surface: "#FFFFFF",
+  border: "#E2E8F0",
+  textPrimary: "#1A202C",
+  textSecondary: "#64748B",
+  textMuted: "#94A3B8",
+  gridLine: "rgba(0,0,0,0.06)",
+  crosshair: "rgba(0,0,0,0.2)",
+  scaleBorder: "rgba(0,0,0,0.1)",
+  tooltipBg: "rgba(255, 255, 255, 0.95)",
+  inputBg: "rgba(0,0,0,0.04)",
+  rowBorder: "rgba(0,0,0,0.06)",
+};
+
+function useColors() {
+  const { theme } = useTheme();
+  return theme === "dark" ? DARK_COLORS : LIGHT_COLORS;
+}
 
 export default function Home() {
   const isMobile = useIsMobile();
+  const { theme, toggleTheme } = useTheme();
+  const COLORS = useColors();
   const [weightingMode, setWeightingMode] = useState<WeightingMode>("market_cap");
   const [timeRange, setTimeRange] = useState<TimeRange>("1Y");
   const [showSpy, setShowSpy] = useState(true);
@@ -145,11 +177,18 @@ export default function Home() {
   }, []);
 
   const chartHeight = isMobile ? 300 : 420;
-  const chartCreatedRef = useRef(false);
   const dataReady = !!(statusQuery.data?.seeded && !chartDataQuery.isLoading && !holdingsQuery.isLoading && chartDataQuery.data && holdingsQuery.data);
 
   useEffect(() => {
-    if (!dataReady || !chartContainerRef.current || chartCreatedRef.current) return;
+    if (!dataReady || !chartContainerRef.current) return;
+
+    if (chartRef.current) {
+      chartRef.current.remove();
+      chartRef.current = null;
+      ophtSeriesRef.current = null;
+      spySeriesRef.current = null;
+      vtiSeriesRef.current = null;
+    }
 
     const container = chartContainerRef.current;
 
@@ -160,20 +199,20 @@ export default function Home() {
         fontFamily: "'DM Sans', 'Inter', sans-serif",
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.04)" },
-        horzLines: { color: "rgba(255,255,255,0.04)" },
+        vertLines: { color: COLORS.gridLine },
+        horzLines: { color: COLORS.gridLine },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: "rgba(255,255,255,0.2)", width: 1, style: 2 },
-        horzLine: { color: "rgba(255,255,255,0.2)", width: 1, style: 2 },
+        vertLine: { color: COLORS.crosshair, width: 1, style: 2 },
+        horzLine: { color: COLORS.crosshair, width: 1, style: 2 },
       },
       rightPriceScale: {
-        borderColor: "rgba(255,255,255,0.1)",
+        borderColor: COLORS.scaleBorder,
         scaleMargins: { top: 0.1, bottom: 0.1 },
       },
       timeScale: {
-        borderColor: "rgba(255,255,255,0.1)",
+        borderColor: COLORS.scaleBorder,
         timeVisible: false,
       },
       width: container.clientWidth,
@@ -215,7 +254,22 @@ export default function Home() {
     ophtSeriesRef.current = ophtSeries;
     spySeriesRef.current = spySeries;
     vtiSeriesRef.current = vtiSeries;
-    chartCreatedRef.current = true;
+
+    ophtSeries.setData(ophtLine as LineData<Time>[]);
+    if (showSpy && spyLine.length > 0) {
+      spySeries.setData(spyLine as LineData<Time>[]);
+      spySeries.applyOptions({ visible: true });
+    } else {
+      spySeries.applyOptions({ visible: false });
+    }
+    if (showVti && vtiLine.length > 0) {
+      vtiSeries.setData(vtiLine as LineData<Time>[]);
+      vtiSeries.applyOptions({ visible: true });
+    } else {
+      vtiSeries.applyOptions({ visible: false });
+    }
+
+    chart.timeScale().fitContent();
 
     chart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.point) {
@@ -257,9 +311,8 @@ export default function Home() {
       ophtSeriesRef.current = null;
       spySeriesRef.current = null;
       vtiSeriesRef.current = null;
-      chartCreatedRef.current = false;
     };
-  }, [dataReady]);
+  }, [dataReady, theme]);
 
   useEffect(() => {
     if (!ophtSeriesRef.current) return;
@@ -289,6 +342,15 @@ export default function Home() {
     }
   }, [showVti, vtiLine]);
 
+  const ophtAccent = COLORS.opht;
+  const ophtAccentBg = theme === "dark" ? "rgba(211, 240, 96, 0.15)" : "rgba(122, 154, 16, 0.12)";
+  const ophtAccentBorder = theme === "dark" ? "rgba(211, 240, 96, 0.3)" : "rgba(122, 154, 16, 0.3)";
+  const ophtAccentSubtle = theme === "dark" ? "rgba(211, 240, 96, 0.08)" : "rgba(122, 154, 16, 0.08)";
+  const spyAccentBg = theme === "dark" ? "rgba(77, 184, 164, 0.15)" : "rgba(26, 138, 112, 0.12)";
+  const spyAccentBorder = theme === "dark" ? "rgba(77, 184, 164, 0.3)" : "rgba(26, 138, 112, 0.3)";
+  const vtiAccentBg = theme === "dark" ? "rgba(91, 141, 239, 0.15)" : "rgba(59, 109, 208, 0.12)";
+  const vtiAccentBorder = theme === "dark" ? "rgba(91, 141, 239, 0.3)" : "rgba(59, 109, 208, 0.3)";
+
   if (!statusQuery.data?.seeded) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: COLORS.background }}>
@@ -315,31 +377,42 @@ export default function Home() {
     <div className="min-h-screen" style={{ backgroundColor: COLORS.background, color: COLORS.textPrimary }}>
       <div className="max-w-6xl mx-auto px-4 py-6 md:py-10">
 
-        {/* Header */}
         <header className="mb-6 md:mb-8" data-testid="header-section">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-title">
-                Ophthalmology Sector ETF
-              </h1>
-              <span
-                className="text-lg md:text-xl font-semibold"
-                style={{ color: COLORS.opht }}
-                data-testid="text-ticker"
-              >
-                $OPHT
-              </span>
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-title">
+                  Ophthalmology Sector ETF
+                </h1>
+                <span
+                  className="text-lg md:text-xl font-semibold"
+                  style={{ color: COLORS.opht }}
+                  data-testid="text-ticker"
+                >
+                  $OPHT
+                </span>
+              </div>
+              <p className="text-sm md:text-base" style={{ color: COLORS.textSecondary }} data-testid="text-tagline">
+                A custom-constructed index tracking publicly traded ophthalmology companies.
+              </p>
             </div>
-            <p className="text-sm md:text-base" style={{ color: COLORS.textSecondary }} data-testid="text-tagline">
-              A custom-constructed index tracking publicly traded ophthalmology companies.
-            </p>
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-md transition-colors shrink-0 mt-1"
+              style={{
+                backgroundColor: COLORS.surface,
+                border: `1px solid ${COLORS.border}`,
+                color: COLORS.textSecondary,
+              }}
+              data-testid="button-toggle-theme"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
           </div>
         </header>
 
-        {/* Controls */}
         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between" data-testid="controls-section">
-
-          {/* Weighting toggle */}
           <div className="flex rounded-md p-1 gap-1" style={{ backgroundColor: COLORS.surface }} data-testid="weighting-toggle">
             {WEIGHTING_MODES.map(({ key, label }) => (
               <button
@@ -347,9 +420,9 @@ export default function Home() {
                 onClick={() => setWeightingMode(key)}
                 className="px-3 py-2 md:py-1.5 text-xs md:text-sm font-medium rounded-md transition-colors flex-1 md:flex-none"
                 style={{
-                  backgroundColor: weightingMode === key ? "rgba(211, 240, 96, 0.15)" : "transparent",
+                  backgroundColor: weightingMode === key ? ophtAccentBg : "transparent",
                   color: weightingMode === key ? COLORS.opht : COLORS.textSecondary,
-                  border: weightingMode === key ? `1px solid rgba(211, 240, 96, 0.3)` : "1px solid transparent",
+                  border: weightingMode === key ? `1px solid ${ophtAccentBorder}` : "1px solid transparent",
                 }}
                 data-testid={`button-weighting-${key}`}
               >
@@ -358,16 +431,15 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Benchmark chips */}
           <div className="flex gap-2" data-testid="benchmark-toggles">
             <span className="text-xs self-center mr-1" style={{ color: COLORS.textMuted }}>Benchmarks:</span>
             <button
               onClick={() => setShowSpy(!showSpy)}
               className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
               style={{
-                backgroundColor: showSpy ? "rgba(77, 184, 164, 0.15)" : "transparent",
+                backgroundColor: showSpy ? spyAccentBg : "transparent",
                 color: showSpy ? COLORS.spy : COLORS.textMuted,
-                border: showSpy ? `1px solid rgba(77, 184, 164, 0.3)` : `1px solid ${COLORS.border}`,
+                border: showSpy ? `1px solid ${spyAccentBorder}` : `1px solid ${COLORS.border}`,
               }}
               data-testid="button-toggle-spy"
             >
@@ -377,9 +449,9 @@ export default function Home() {
               onClick={() => setShowVti(!showVti)}
               className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
               style={{
-                backgroundColor: showVti ? "rgba(91, 141, 239, 0.15)" : "transparent",
+                backgroundColor: showVti ? vtiAccentBg : "transparent",
                 color: showVti ? COLORS.vti : COLORS.textMuted,
-                border: showVti ? `1px solid rgba(91, 141, 239, 0.3)` : `1px solid ${COLORS.border}`,
+                border: showVti ? `1px solid ${vtiAccentBorder}` : `1px solid ${COLORS.border}`,
               }}
               data-testid="button-toggle-vti"
             >
@@ -388,11 +460,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Exclusion notice */}
         {excludedSymbols.size > 0 && (
           <div
             className="mb-3 rounded-md px-3 py-2 flex items-center justify-between text-xs"
-            style={{ backgroundColor: "rgba(211, 240, 96, 0.08)", border: "1px solid rgba(211, 240, 96, 0.2)" }}
+            style={{ backgroundColor: ophtAccentSubtle, border: `1px solid ${ophtAccentBorder}` }}
             data-testid="exclusion-notice"
           >
             <span style={{ color: COLORS.opht }}>
@@ -410,17 +481,15 @@ export default function Home() {
           </div>
         )}
 
-        {/* Chart */}
         <div
           className="rounded-md relative"
           style={{ backgroundColor: COLORS.surface, border: `1px solid ${COLORS.border}` }}
           data-testid="chart-container"
         >
-          {/* Tooltip */}
           {tooltipData && (
             <div
               className="absolute top-3 left-3 z-10 rounded-md px-3 py-2 text-xs"
-              style={{ backgroundColor: "rgba(13, 17, 23, 0.9)", border: `1px solid ${COLORS.border}` }}
+              style={{ backgroundColor: COLORS.tooltipBg, border: `1px solid ${COLORS.border}` }}
               data-testid="chart-tooltip"
             >
               <div className="font-medium mb-1" style={{ color: COLORS.textPrimary }}>{tooltipData.date}</div>
@@ -456,7 +525,6 @@ export default function Home() {
 
           <div ref={chartContainerRef} className="w-full" style={{ minHeight: chartHeight }} />
 
-          {/* Time range selector */}
           <div className="flex justify-center gap-1 pb-3 pt-2" data-testid="time-range-selector">
             {TIME_RANGES.map(r => (
               <button
@@ -464,7 +532,7 @@ export default function Home() {
                 onClick={() => setTimeRange(r)}
                 className={`${isMobile ? "px-3 py-2" : "px-2.5 py-1"} text-xs font-medium rounded-md transition-colors`}
                 style={{
-                  backgroundColor: timeRange === r ? "rgba(211, 240, 96, 0.15)" : "transparent",
+                  backgroundColor: timeRange === r ? ophtAccentBg : "transparent",
                   color: timeRange === r ? COLORS.opht : COLORS.textMuted,
                 }}
                 data-testid={`button-range-${r}`}
@@ -475,7 +543,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Summary Stats Bar */}
         <div
           className="mt-4 rounded-md px-4 py-3 grid grid-cols-3 gap-2 md:flex md:flex-wrap md:gap-8 md:items-center text-sm"
           style={{ backgroundColor: COLORS.surface, border: `1px solid ${COLORS.border}` }}
@@ -534,7 +601,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Investment Calculator */}
         {(() => {
           const amt = parseFloat(investmentAmount) || 0;
           const ophtFinal = ophtLine.length > 1 ? (amt * ophtLine[ophtLine.length - 1].value / 100) : null;
@@ -566,7 +632,7 @@ export default function Home() {
                       }}
                       className="w-28 md:w-32 pl-6 pr-2 py-1.5 text-sm font-mono rounded-md outline-none focus:ring-1"
                       style={{
-                        backgroundColor: "rgba(255,255,255,0.05)",
+                        backgroundColor: COLORS.inputBg,
                         border: `1px solid ${COLORS.border}`,
                         color: COLORS.textPrimary,
                       }}
@@ -639,7 +705,6 @@ export default function Home() {
           );
         })()}
 
-        {/* Holdings Table */}
         <div className="mt-6" data-testid="holdings-section">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold" data-testid="text-holdings-title">
@@ -673,7 +738,7 @@ export default function Home() {
                       key={h.symbol}
                       className="transition-opacity"
                       style={{
-                        borderBottom: i < allWeights.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none",
+                        borderBottom: i < allWeights.length - 1 ? `1px solid ${COLORS.rowBorder}` : "none",
                         opacity: h.excluded ? 0.4 : 1,
                       }}
                       data-testid={`row-holding-${h.symbol}`}
@@ -709,7 +774,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Footer */}
         <footer className="mt-8 mb-6 text-center text-xs" style={{ color: COLORS.textMuted }} data-testid="footer-section">
           <p className="mb-1">
             Methodology: {weightingMode === "market_cap" ? "Float-adjusted market cap weighted" : weightingMode === "equal_weight" ? "Equal weighted" : "Market cap weighted, capped at 25% per holding"}.
@@ -719,7 +783,7 @@ export default function Home() {
             This is a custom-constructed index for educational and informational purposes only. Not investment advice.
             Past performance does not guarantee future results.
           </p>
-          <p>Built by <a href="https://www.linkedin.com/in/jamiesonwebking/" target="_blank" rel="noopener noreferrer" className="hover:text-[#D3F060] transition-colors underline" data-testid="link-linkedin">jwebking</a></p>
+          <p>Built by <a href="https://www.linkedin.com/in/jamiesonwebking/" target="_blank" rel="noopener noreferrer" className="hover:opacity-75 transition-colors underline" data-testid="link-linkedin">jwebking</a></p>
         </footer>
       </div>
     </div>
