@@ -19,6 +19,7 @@ const WEIGHTING_MODES: { key: WeightingMode; label: string }[] = [
 
 const DARK_COLORS = {
   opht: "#D3F060",
+  highlight: "#D3F060",
   spy: "#4DB8A4",
   vti: "#5B8DEF",
   background: "#0D1117",
@@ -37,6 +38,7 @@ const DARK_COLORS = {
 
 const LIGHT_COLORS = {
   opht: "#D3F060",
+  highlight: "#0D7377",
   spy: "#4DB8A4",
   vti: "#5B8DEF",
   background: "#F8FAFB",
@@ -342,10 +344,9 @@ export default function Home() {
     }
   }, [showVti, vtiLine]);
 
-  const ophtAccent = COLORS.opht;
-  const ophtAccentBg = "rgba(211, 240, 96, 0.15)";
-  const ophtAccentBorder = "rgba(211, 240, 96, 0.3)";
-  const ophtAccentSubtle = "rgba(211, 240, 96, 0.08)";
+  const highlightAccentBg = theme === "dark" ? "rgba(211, 240, 96, 0.15)" : "rgba(13, 115, 119, 0.1)";
+  const highlightAccentBorder = theme === "dark" ? "rgba(211, 240, 96, 0.3)" : "rgba(13, 115, 119, 0.25)";
+  const highlightAccentSubtle = theme === "dark" ? "rgba(211, 240, 96, 0.08)" : "rgba(13, 115, 119, 0.06)";
   const spyAccentBg = "rgba(77, 184, 164, 0.15)";
   const spyAccentBorder = "rgba(77, 184, 164, 0.3)";
   const vtiAccentBg = "rgba(91, 141, 239, 0.15)";
@@ -354,7 +355,7 @@ export default function Home() {
   if (!statusQuery.data?.seeded) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: COLORS.background }}>
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: COLORS.opht }} />
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: COLORS.highlight }} />
         <p className="text-lg" style={{ color: COLORS.textSecondary }}>
           Loading market data for the first time...
         </p>
@@ -368,7 +369,7 @@ export default function Home() {
   if (chartDataQuery.isLoading || holdingsQuery.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: COLORS.background }}>
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: COLORS.opht }} />
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: COLORS.highlight }} />
       </div>
     );
   }
@@ -386,7 +387,7 @@ export default function Home() {
                 </h1>
                 <span
                   className="text-lg md:text-xl font-semibold"
-                  style={{ color: COLORS.opht }}
+                  style={{ color: COLORS.highlight }}
                   data-testid="text-ticker"
                 >
                   $OPHT
@@ -420,9 +421,9 @@ export default function Home() {
                 onClick={() => setWeightingMode(key)}
                 className="px-3 py-2 md:py-1.5 text-xs md:text-sm font-medium rounded-md transition-colors flex-1 md:flex-none"
                 style={{
-                  backgroundColor: weightingMode === key ? ophtAccentBg : "transparent",
-                  color: weightingMode === key ? COLORS.opht : COLORS.textSecondary,
-                  border: weightingMode === key ? `1px solid ${ophtAccentBorder}` : "1px solid transparent",
+                  backgroundColor: weightingMode === key ? highlightAccentBg : "transparent",
+                  color: weightingMode === key ? COLORS.highlight : COLORS.textSecondary,
+                  border: weightingMode === key ? `1px solid ${highlightAccentBorder}` : "1px solid transparent",
                 }}
                 data-testid={`button-weighting-${key}`}
               >
@@ -463,16 +464,16 @@ export default function Home() {
         {excludedSymbols.size > 0 && (
           <div
             className="mb-3 rounded-md px-3 py-2 flex items-center justify-between text-xs"
-            style={{ backgroundColor: ophtAccentSubtle, border: `1px solid ${ophtAccentBorder}` }}
+            style={{ backgroundColor: highlightAccentSubtle, border: `1px solid ${highlightAccentBorder}` }}
             data-testid="exclusion-notice"
           >
-            <span style={{ color: COLORS.opht }}>
+            <span style={{ color: COLORS.highlight }}>
               {excludedSymbols.size} stock{excludedSymbols.size > 1 ? "s" : ""} excluded from index calculation
             </span>
             <button
               onClick={resetExclusions}
               className="flex items-center gap-1 px-2 py-1 rounded transition-colors"
-              style={{ color: COLORS.opht }}
+              style={{ color: COLORS.highlight }}
               data-testid="button-reset-exclusions"
             >
               <RotateCcw className="w-3 h-3" />
@@ -496,8 +497,8 @@ export default function Home() {
               {tooltipData.opht !== undefined && (
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: COLORS.opht }} />
-                  <span style={{ color: COLORS.opht }}>$OPHT: {tooltipData.opht?.toFixed(1)}</span>
-                  <span style={{ color: (tooltipData.ophtReturn ?? 0) >= 0 ? COLORS.opht : "#ef4444" }}>
+                  <span style={{ color: COLORS.highlight }}>$OPHT: {tooltipData.opht?.toFixed(1)}</span>
+                  <span style={{ color: (tooltipData.ophtReturn ?? 0) >= 0 ? COLORS.highlight : "#ef4444" }}>
                     ({formatPercent(tooltipData.ophtReturn ?? 0)})
                   </span>
                 </div>
@@ -532,8 +533,8 @@ export default function Home() {
                 onClick={() => setTimeRange(r)}
                 className={`${isMobile ? "px-3 py-2" : "px-2.5 py-1"} text-xs font-medium rounded-md transition-colors`}
                 style={{
-                  backgroundColor: timeRange === r ? ophtAccentBg : "transparent",
-                  color: timeRange === r ? COLORS.opht : COLORS.textMuted,
+                  backgroundColor: timeRange === r ? highlightAccentBg : "transparent",
+                  color: timeRange === r ? COLORS.highlight : COLORS.textMuted,
                 }}
                 data-testid={`button-range-${r}`}
               >
@@ -555,7 +556,7 @@ export default function Home() {
             </div>
             <span
               className="font-semibold text-sm md:text-base"
-              style={{ color: ophtReturn !== null && ophtReturn >= 0 ? COLORS.opht : "#ef4444" }}
+              style={{ color: ophtReturn !== null && ophtReturn >= 0 ? COLORS.highlight : "#ef4444" }}
               data-testid="text-opht-return"
             >
               {ophtReturn !== null ? formatPercent(ophtReturn) : "—"}
@@ -616,7 +617,7 @@ export default function Home() {
             >
               <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
                 <div className="flex items-center gap-2 shrink-0">
-                  <DollarSign className="w-4 h-4" style={{ color: COLORS.opht }} />
+                  <DollarSign className="w-4 h-4" style={{ color: COLORS.highlight }} />
                   <span className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>
                     If you invested
                   </span>
@@ -649,12 +650,12 @@ export default function Home() {
                     <span className="text-xs" style={{ color: COLORS.textMuted }}>$OPHT</span>
                     <span
                       className="text-sm md:text-base font-semibold font-mono"
-                      style={{ color: ophtFinal !== null && ophtFinal >= amt ? COLORS.opht : "#ef4444" }}
+                      style={{ color: ophtFinal !== null && ophtFinal >= amt ? COLORS.highlight : "#ef4444" }}
                     >
                       {amt > 0 && ophtFinal !== null ? formatDollar(ophtFinal) : "—"}
                     </span>
                     {amt > 0 && ophtFinal !== null && (
-                      <span className="text-xs font-mono" style={{ color: ophtFinal >= amt ? COLORS.opht : "#ef4444" }}>
+                      <span className="text-xs font-mono" style={{ color: ophtFinal >= amt ? COLORS.highlight : "#ef4444" }}>
                         {ophtFinal >= amt ? "+" : ""}{formatDollar(ophtFinal - amt)}
                       </span>
                     )}
@@ -754,7 +755,7 @@ export default function Home() {
                         </button>
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-2.5">
-                        <span className="font-medium" style={{ color: h.excluded ? COLORS.textMuted : COLORS.opht }}>{h.symbol}</span>
+                        <span className="font-medium" style={{ color: h.excluded ? COLORS.textMuted : COLORS.highlight }}>{h.symbol}</span>
                         <span className="block text-xs md:hidden truncate max-w-[140px]" style={{ color: COLORS.textMuted }}>{h.companyName}</span>
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-2.5 hidden md:table-cell" style={{ color: h.excluded ? COLORS.textMuted : COLORS.textSecondary }}>
