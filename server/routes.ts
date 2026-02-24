@@ -1,30 +1,23 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import { type Server } from "http";
 import { storage } from "./storage";
 import { seedAllData, dailyUpdate, getOphtTickers, getBenchmarkTickers } from "./fmp";
+import rateLimit from "express-rate-limit";
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: "error", message: "Too many requests, please try again later." },
+});
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
 
-  app.get("/api/seed", async (_req, res) => {
-    try {
-      const result = await seedAllData();
-      res.json(result);
-    } catch (error: any) {
-      res.status(500).json({ status: "error", message: error.message });
-    }
-  });
-
-  app.get("/api/update", async (_req, res) => {
-    try {
-      const result = await dailyUpdate();
-      res.json(result);
-    } catch (error: any) {
-      res.status(500).json({ status: "error", message: error.message });
-    }
-  });
+  app.use("/api/", apiLimiter);
 
   app.get("/api/status", async (_req, res) => {
     try {
@@ -37,7 +30,8 @@ export async function registerRoutes(
         seedInProgress: inProgress === "true",
       });
     } catch (error: any) {
-      res.status(500).json({ status: "error", message: error.message });
+      console.error("Status route error:", error);
+      res.status(500).json({ status: "error", message: "Failed to retrieve status" });
     }
   });
 
@@ -53,7 +47,8 @@ export async function registerRoutes(
 
       res.json(grouped);
     } catch (error: any) {
-      res.status(500).json({ status: "error", message: error.message });
+      console.error("Chart data route error:", error);
+      res.status(500).json({ status: "error", message: "Failed to retrieve chart data" });
     }
   });
 
@@ -76,11 +71,11 @@ export async function registerRoutes(
 
       res.json(holdings);
     } catch (error: any) {
-      res.status(500).json({ status: "error", message: error.message });
+      console.error("Holdings route error:", error);
+      res.status(500).json({ status: "error", message: "Failed to retrieve holdings" });
     }
   });
 
-  // Auto-seed on startup
   seedAllData().then(result => {
     console.log("Auto-seed result:", result);
     if (result.status === "already_seeded") {
