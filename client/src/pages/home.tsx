@@ -106,11 +106,6 @@ export default function Home() {
     enabled: statusQuery.data?.seeded === true,
   });
 
-  useEffect(() => {
-    if (statusQuery.data && !statusQuery.data.seeded && !statusQuery.data.seedInProgress) {
-      fetch("/api/seed");
-    }
-  }, [statusQuery.data]);
 
   const activeHoldings = useMemo(() => {
     if (!holdingsQuery.data) return [];
