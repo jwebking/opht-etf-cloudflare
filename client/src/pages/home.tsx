@@ -36,9 +36,9 @@ const DARK_COLORS = {
 };
 
 const LIGHT_COLORS = {
-  opht: "#7A9A10",
-  spy: "#1A8A70",
-  vti: "#3B6DD0",
+  opht: "#D3F060",
+  spy: "#4DB8A4",
+  vti: "#5B8DEF",
   background: "#F8FAFB",
   surface: "#FFFFFF",
   border: "#E2E8F0",
@@ -343,13 +343,13 @@ export default function Home() {
   }, [showVti, vtiLine]);
 
   const ophtAccent = COLORS.opht;
-  const ophtAccentBg = theme === "dark" ? "rgba(211, 240, 96, 0.15)" : "rgba(122, 154, 16, 0.12)";
-  const ophtAccentBorder = theme === "dark" ? "rgba(211, 240, 96, 0.3)" : "rgba(122, 154, 16, 0.3)";
-  const ophtAccentSubtle = theme === "dark" ? "rgba(211, 240, 96, 0.08)" : "rgba(122, 154, 16, 0.08)";
-  const spyAccentBg = theme === "dark" ? "rgba(77, 184, 164, 0.15)" : "rgba(26, 138, 112, 0.12)";
-  const spyAccentBorder = theme === "dark" ? "rgba(77, 184, 164, 0.3)" : "rgba(26, 138, 112, 0.3)";
-  const vtiAccentBg = theme === "dark" ? "rgba(91, 141, 239, 0.15)" : "rgba(59, 109, 208, 0.12)";
-  const vtiAccentBorder = theme === "dark" ? "rgba(91, 141, 239, 0.3)" : "rgba(59, 109, 208, 0.3)";
+  const ophtAccentBg = "rgba(211, 240, 96, 0.15)";
+  const ophtAccentBorder = "rgba(211, 240, 96, 0.3)";
+  const ophtAccentSubtle = "rgba(211, 240, 96, 0.08)";
+  const spyAccentBg = "rgba(77, 184, 164, 0.15)";
+  const spyAccentBorder = "rgba(77, 184, 164, 0.3)";
+  const vtiAccentBg = "rgba(91, 141, 239, 0.15)";
+  const vtiAccentBorder = "rgba(91, 141, 239, 0.3)";
 
   if (!statusQuery.data?.seeded) {
     return (

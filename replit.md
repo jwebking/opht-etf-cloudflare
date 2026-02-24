@@ -27,7 +27,7 @@ A professional-grade custom ETF index tracker for the ophthalmology sector, feat
 
 ### Design System
 - Dark mode (default): Background #0D1117, Surface #0f2027, Accent #D3F060 (lime), SPY #4DB8A4, VTI #5B8DEF
-- Light mode: Background #F8FAFB, Surface #FFFFFF, Accent #7A9A10 (dark lime), SPY #1A8A70, VTI #3B6DD0
+- Light mode: Background #F8FAFB, Surface #FFFFFF, same accent colors as dark mode (#D3F060, #4DB8A4, #5B8DEF)
 - Theme toggle in header, persisted to localStorage
 - ThemeProvider at `client/src/components/theme-provider.tsx`
 - Fonts: DM Sans / Inter
