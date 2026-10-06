@@ -13,11 +13,11 @@
     {
       "binding": "DB",
       "database_name": "opht-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "9f2fdb4c-6319-4e89-9a94-d470ab801438",
       "migrations_dir": "migrations"
     }
   ],
-  "kv_namespaces": [{ "binding": "CHART_CACHE", "id": "00000000000000000000000000000000" }],
+  "kv_namespaces": [{ "binding": "CHART_CACHE", "id": "aaafb0a4d4924eb18a0456bd1f913928" }],
   "triggers": { "crons": ["30,35,40,45 22 * * 1-5"] },
   "observability": { "enabled": true }
 }
