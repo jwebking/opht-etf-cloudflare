@@ -53,7 +53,7 @@ npm run check     # typecheck front end + worker
 The cron handles daily updates. To run a batch by hand (for example after an outage), call the admin endpoint. Batches are `0`–`3`, 7 symbols each, to stay under the free plan's 50-subrequest limit. Batch `3` also records the update date.
 
 ```bash
-curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" "https://<your-worker>.workers.dev/api/admin/update?batch=0"
+curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" "https://ophthalmology-index.jamieson-5a3.workers.dev/api/admin/update?batch=0"
 ```
 
 ## Notes
