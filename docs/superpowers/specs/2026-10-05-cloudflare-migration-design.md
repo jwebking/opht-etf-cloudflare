@@ -166,3 +166,21 @@ Upload earnings-call transcripts, 10-K/8-K/annual reports per company → R2. Ch
 (Workers AI embeddings) → Vectorize index with `symbol`/`doc_type`/`period` metadata. A `/api/ask`
 route does retrieval and calls an LLM (Workers AI or Claude API) with citations. An admin upload
 page behind Cloudflare Access. D1 gains a `documents` table. Likely requires Workers Paid ($5/mo).
+
+## Revisions during planning (2026-10-05)
+
+Findings from probing live endpoints while writing the plan:
+
+- **Stooq dropped.** Its CSV endpoint now serves a JavaScript proof-of-work bot wall. The fallback
+  for daily prices is Yahoo's `query2` host; FMP EOD remains the option if Yahoo blocks Cloudflare.
+- **Market caps come from FMP only.** Yahoo's chart `meta` has no `marketCap` (verified on ALC), so
+  without `FMP_API_KEY` caps are never populated and market-cap weighting degrades.
+- **ADVM, APLS, CLSD return "No data found, symbol may be delisted" from Yahoo.** They stay in the
+  ticker list (holdings parity) but have no price series; the constituent list is the owner's call.
+- **Front end stays in `client/`** instead of moving to `src/client/` (less churn, aliases unchanged).
+- **KV is appended, not rebuilt.** Each per-symbol KV value carries `metadata.last`; the cron appends
+  new points via string ops when KV is in sync with D1, else rebuilds that symbol from D1.
+- **`/api/chart-data` uses KV bulk get** (one call for 28 keys) plus the Cache API (active only on a
+  custom domain; no-op on `*.workers.dev`).
+- **Manual update takes `batch=0..3` only** (no `all`): 28 symbols in one invocation would exceed the
+  Free plan's 50-subrequest limit.
